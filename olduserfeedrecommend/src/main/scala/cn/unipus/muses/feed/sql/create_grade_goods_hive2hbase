@@ -1,0 +1,64 @@
+/**创建商品和年级的商品对应关系
+*/
+
+select
+t3.grade,
+concat_ws('_',collect_set(t3.id)) grade_goods
+from
+(select
+t1.id,
+t2.grade
+from
+(select
+id,
+third_party_id
+from dwd_vof_goods
+where del_flag = 'false'
+and status = '7') t1
+inner join (
+select
+course_id,
+grade
+from dwd_course_grade
+where del_flag = 'false'
+) t2
+on t1.third_party_id = t2.course_id
+group by t1.id,t2.grade) t3
+group by t3.grade
+
+//创建年级商品对应关系hive2hbase表
+CREATE  TABLE ads_grade_goods_recently(
+grade String,
+grade_goods String
+)
+STORED BY 'org.apache.hadoop.hive.hbase.HBaseStorageHandler'
+WITH SERDEPROPERTIES("hbase.columns.mapping" = ":key,info:grade_goods")
+TBLPROPERTIES("hbase.table.name" = "vof:grade_goods_recently");
+
+//将结果插入到hive表中
+insert overwrite table ads_grade_goods_recently
+select
+t3.grade,
+concat_ws('_',collect_set(t3.id)) new_goods
+from
+(select
+t1.id,
+t2.grade
+from
+(select
+id,
+third_party_id
+from dwd_vof_goods
+where create_time > "2020-12-12"
+and del_flag = 'false'
+and status = '7') t1
+inner join (
+select
+course_id,
+grade
+from dwd_course_grade
+where del_flag = 'false'
+) t2
+on t1.third_party_id = t2.course_id
+group by t1.id,t2.grade) t3
+group by t3.grade

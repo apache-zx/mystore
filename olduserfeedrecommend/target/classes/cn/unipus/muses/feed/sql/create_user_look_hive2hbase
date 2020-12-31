@@ -1,0 +1,34 @@
+/**创建用户浏览纪律表，如果有浏览记录，就是老用户，如果没有就是新用户
+*/
+select
+t1.user_id,
+concat_ws('_',collect_set(goods_id)) user_looked_goods
+from
+(select
+user_id,
+goods_id
+from dwd_user_look
+group by user_id,goods_id) t1
+group by t1.user_id
+
+//创建用户浏览商品表hive2hbase
+CREATE  TABLE ads_user_looked_goods(
+user_id String,
+goods_list String
+)
+STORED BY 'org.apache.hadoop.hive.hbase.HBaseStorageHandler'
+WITH SERDEPROPERTIES("hbase.columns.mapping" = ":key,info:user_looked")
+TBLPROPERTIES("hbase.table.name" = "vof:user_looked_goods");
+
+//插入数据到hive表
+insert into table ads_user_looked_goods
+select
+t1.user_id,
+concat_ws('_',collect_set(goods_id)) goods_list
+from
+(select
+user_id,
+goods_id
+from dwd_user_look
+group by user_id,goods_id) t1
+group by t1.user_id

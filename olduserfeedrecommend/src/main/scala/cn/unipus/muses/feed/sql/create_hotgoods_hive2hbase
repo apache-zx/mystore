@@ -1,0 +1,140 @@
+/**
+创建热门商品，累计7天销售量，访问量商品
+创建hive表，同时映射到hbase
+*/
+select
+t7.grade,
+concat_ws('_',collect_set(id)) as hot_goods
+from
+(select
+t3.id,
+t6.grade,
+t3.dif_like,
+t3.dif_access,
+t3.dif_sales
+from
+(select
+t1.id,
+t1.like_count - t2.like_count as dif_like,
+t1.access_count - t2.access_count as dif_access,
+t1.sales_count - t2.sales_count as dif_sales
+from
+(select
+id,
+like_count,
+access_count,
+sales_count
+from dwd_vof_goods_ext
+where dt = '2020-12-17'
+and del_flag = 'false') t1
+inner join(
+select
+id,
+like_count,
+access_count,
+sales_count
+from dwd_vof_goods_ext
+where dt = '2020-12-10'
+and del_flag = 'false'
+) t2
+on t1.id = t2.id) t3
+)inner join (
+select
+t4.id,
+t5.grade
+from
+(select
+id,
+third_party_id
+from dwd_vof_goods
+where del_flag = 'false'
+and status = '7') t4
+inner join (
+select
+course_id,
+grade
+from dwd_course_grade
+where del_flag = 'false'
+) t5
+on t4.third_party_id = t5.course_id
+group by t4.id,t5.grade
+) t6
+on t3.id = t6.id) t7
+group by t7.grade
+order by t3.dif_like,t3.dif_access,t3.dif_sales
+
+//创建热门商品hive2hbase表
+CREATE  TABLE ads_hot_goods_recently(
+grade String,
+hot_goods String
+)
+STORED BY 'org.apache.hadoop.hive.hbase.HBaseStorageHandler'
+WITH SERDEPROPERTIES("hbase.columns.mapping" = ":key,info:hot_goods")
+TBLPROPERTIES("hbase.table.name" = "vof:hot_goods_recently");
+
+//将数据插入到hive表
+insert overwrite table ads_hot_goods_recently
+select
+t7.grade,
+concat_ws('_',collect_set(id)) as hot_goods
+from
+(select
+t3.id,
+t6.grade,
+t3.dif_like,
+t3.dif_access,
+t3.dif_sales
+from
+(select
+t1.id,
+t1.like_count - t2.like_count as dif_like,
+t1.access_count - t2.access_count as dif_access,
+t1.sales_count - t2.sales_count as dif_sales
+from
+(select
+id,
+like_count,
+access_count,
+sales_count
+from dwd_vof_goods_ext
+where dt = '2020-12-17'
+and del_flag = 'false') t1
+inner join(
+select
+id,
+like_count,
+access_count,
+sales_count
+from dwd_vof_goods_ext
+where dt = '2020-12-10'
+and del_flag = 'false'
+) t2
+on t1.id = t2.id) t3
+)inner join (
+select
+t4.id,
+t5.grade
+from
+(select
+id,
+third_party_id
+from dwd_vof_goods
+where del_flag = 'false'
+and status = '7') t4
+inner join (
+select
+course_id,
+grade
+from dwd_course_grade
+where del_flag = 'false'
+) t5
+on t4.third_party_id = t5.course_id
+group by t4.id,t5.grade
+) t6
+on t3.id = t6.id) t7
+group by t7.grade
+order by t3.dif_like,t3.dif_access,t3.dif_sales
+
+
+
+

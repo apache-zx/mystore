@@ -1,0 +1,105 @@
+/**hive商品表查询语句，
+查询出商品表的商品id，
+商品的多个维度，
+商品表的多个适用年级，
+这个商品的维度总数
+*/
+
+select
+t6.id,
+t5.label,
+t5.grade,
+t5.feature_count
+from
+(select
+t3.course_id,
+t3.label,
+t4.grade,
+t3.feature_count
+from
+(select
+t1.course_id,
+t1.label,
+t2.feature_count
+from
+(select
+course_id,
+label
+from dwd_course_label
+where del_flag = 'false') t1
+inner join
+(select
+course_id,
+count(label) feature_count
+from dwd_course_label
+where del_flag = 'false'
+group by course_id) t2
+on t1.course_id = t2.course_id) t3
+inner join (
+select
+course_id,
+grade
+from dwd_course_grade
+where del_flag = 'false'
+) t4
+on t3.course_id = t4.course_id) t5
+inner join (
+select
+id,
+third_party_id
+from dwd_vof_goods
+where status ='7'
+and del_flag ='false'
+) t6
+on t5.course_id = t6.third_party_id
+
+#测试
+insert overwrite table dwd_good_feature_result1
+partition(dt = '2020-12-28')
+select
+t5.label,
+t6.id,
+t5.grade,
+t5.feature_count
+from
+(select
+t3.course_id,
+t3.label,
+t4.grade,
+t3.feature_count
+from
+(select
+t1.course_id,
+t1.label,
+t2.feature_count
+from
+(select
+course_id,
+label
+from dwd_course_label
+where del_flag = 'false') t1
+inner join
+(select
+course_id,
+count(label) feature_count
+from dwd_course_label
+where del_flag = 'false'
+group by course_id) t2
+on t1.course_id = t2.course_id) t3
+inner join (
+select
+course_id,
+grade
+from dwd_course_grade
+where del_flag = 'false'
+) t4
+on t3.course_id = t4.course_id) t5
+inner join (
+select
+id,
+third_party_id
+from dwd_vof_goods
+where status ='7'
+and del_flag ='false'
+) t6
+on t5.course_id = t6.third_party_id

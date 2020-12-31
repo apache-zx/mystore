@@ -1,0 +1,38 @@
+/**
+用户表的sql
+查询出用户的id，
+用户的喜好标签，
+用户的年级，
+用户的标签数量，
+*/
+select
+t3.user_id,
+t3.label,
+t4.level,
+t3.feature_count
+from
+(select
+t1.user_id,
+t1.label,
+t2.feature_count
+from
+(select
+user_id,
+label
+from dwd_user_look_label) t1
+inner join (
+select
+user_id,
+count(label) feature_count
+from dwd_user_look_label
+group by user_id
+) t2
+on t1.user_id = t2.user_id) t3
+inner join (
+select
+id,
+level
+from dwd_base_user
+where del_flag = 'false'
+) t4
+on t4.id =t3.user_id
